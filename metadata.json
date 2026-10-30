@@ -1,0 +1,6 @@
+{
+  "name": "جمعية ذات أثر للأعمال الخيرية",
+  "description": "الموقع الرسمي لجمعية ذات أثر للأعمال الخيرية بالأقواز - الصف - الجيزة (مشهرة برقم 8014). نبني الإنسان بالعلم والقيم ونصنع الأثر بالعطاء.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
