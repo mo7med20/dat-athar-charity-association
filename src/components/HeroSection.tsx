@@ -108,15 +108,20 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onPrimaryDonateClick }
         {/* Image Container: w-full lg:w-1/2 flex justify-center */}
         <div className="w-full lg:w-1/2 flex justify-center">
           <figure className="w-full max-w-sm lg:max-w-md flex flex-col items-center space-y-2.5">
-            <img
-              src={heroImgSrc}
-              alt="الحاجة فاطمة صابر رئيس مجلس إدارة جمعية ذات أثر للأعمال الخيرية أمام اللوحة الرسمية للجمعية بقرية الأقواز"
-              width={1080}
-              height={799}
-              referrerPolicy="no-referrer"
-              onError={handleHeroImgError}
-              className="w-full max-w-sm lg:max-w-md h-60 sm:h-68 lg:h-76 object-cover object-center rounded-3xl shadow-xl border-4 border-white"
-            />
+            <picture className="w-full max-w-sm lg:max-w-md block">
+              {heroImgSrc === CHARITY_INFO.heroImage && (
+                <source srcSet={CHARITY_INFO.heroImageWebp} type="image/webp" />
+              )}
+              <img
+                src={heroImgSrc}
+                alt="الحاجة فاطمة صابر رئيس مجلس إدارة جمعية ذات أثر للأعمال الخيرية أمام اللوحة الرسمية للجمعية بقرية الأقواز"
+                width={1080}
+                height={799}
+                referrerPolicy="no-referrer"
+                onError={handleHeroImgError}
+                className="w-full max-w-sm lg:max-w-md h-60 sm:h-68 lg:h-76 object-cover object-center rounded-3xl shadow-xl border-4 border-white"
+              />
+            </picture>
             <figcaption className="w-full px-4 py-2.5 bg-[#F5F9F7] rounded-2xl border border-[#DCE7E5] flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[13px] md:text-sm leading-relaxed text-gray-700">
               <div className="flex-1 min-w-0 whitespace-normal">
                 <span className="font-bold text-blue-900">{CHARITY_INFO.chairperson}</span>

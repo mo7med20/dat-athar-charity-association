@@ -132,14 +132,17 @@ export const AboutSection: React.FC = () => {
           {/* Left Column: Dar Riyad Al-Saliheen Feature Card */}
           <div className="w-full lg:flex-1 min-w-0 bg-white rounded-2xl p-4 md:p-5 border border-[#DCE7E5] flex flex-col justify-between gap-4">
             <div className="w-full rounded-2xl shadow-lg border border-gray-100 overflow-hidden bg-[#F5F9F7]">
-              <img
-                src="/assets/activities/dar_riyad.jpg"
-                alt="لوحة دار رياض الصالحين لتحفيظ القرآن الكريم وتأسيس الأطفال بقرية الأقواز"
-                width={275}
-                height={240}
-                loading="lazy"
-                className="w-full h-48 md:h-52 object-cover object-center rounded-xl contrast-[1.05] saturate-[1.05] brightness-[1.02] transition-transform duration-500 hover:scale-110"
-              />
+              <picture className="block w-full">
+                <source srcSet="/assets/activities/dar_riyad.webp" type="image/webp" />
+                <img
+                  src="/assets/activities/dar_riyad.jpg"
+                  alt="لوحة دار رياض الصالحين لتحفيظ القرآن الكريم وتأسيس الأطفال بقرية الأقواز"
+                  width={275}
+                  height={240}
+                  loading="lazy"
+                  className="w-full h-48 md:h-52 object-cover object-center rounded-xl contrast-[1.05] saturate-[1.05] brightness-[1.02] transition-transform duration-500 hover:scale-110"
+                />
+              </picture>
             </div>
 
             <div className="w-full space-y-3 flex-1 flex flex-col justify-between">

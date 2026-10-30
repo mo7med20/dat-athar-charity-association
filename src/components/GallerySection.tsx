@@ -171,14 +171,17 @@ export const GallerySection: React.FC = () => {
               onClick={() => setShowFullNewspaper(true)}
               className="w-full rounded-2xl shadow-lg border border-gray-100 overflow-hidden bg-white cursor-zoom-in"
             >
-              <img
-                src={CHARITY_INFO.activitiesImage}
-                alt="قصاصة صحفية توثق أنشطة جمعية ذات أثر للأعمال الخيرية بقرية الأقواز"
-                width={400}
-                height={300}
-                loading="lazy"
-                className="w-full h-44 md:h-52 object-cover object-center rounded-xl contrast-[1.05] saturate-[1.05] brightness-[1.02] transition-transform duration-500 hover:scale-110"
-              />
+              <picture className="block w-full">
+                <source srcSet={CHARITY_INFO.activitiesImageWebp} type="image/webp" />
+                <img
+                  src={CHARITY_INFO.activitiesImage}
+                  alt="قصاصة صحفية توثق أنشطة جمعية ذات أثر للأعمال الخيرية بقرية الأقواز"
+                  width={400}
+                  height={300}
+                  loading="lazy"
+                  className="w-full h-44 md:h-52 object-cover object-center rounded-xl contrast-[1.05] saturate-[1.05] brightness-[1.02] transition-transform duration-500 hover:scale-110"
+                />
+              </picture>
             </div>
           </div>
         </div>
@@ -216,12 +219,17 @@ export const GallerySection: React.FC = () => {
               </button>
             </div>
 
-            <div className="w-full rounded-2xl shadow-lg border border-gray-100 overflow-hidden bg-[#F5F9F7]">
-              <img
-                src={activePhoto.src}
-                alt={activePhoto.alt}
-                className="w-full h-56 md:h-96 object-cover object-center rounded-xl contrast-[1.05] saturate-[1.05] brightness-[1.02] transition-transform duration-500 hover:scale-110"
-              />
+            <div className="w-full rounded-2xl shadow-lg border border-gray-100 overflow-hidden bg-[#F5F9F7] flex items-center justify-center p-2">
+              <picture className="block w-full">
+                {activePhoto.webpSrc && (
+                  <source srcSet={activePhoto.webpSrc} type="image/webp" />
+                )}
+                <img
+                  src={activePhoto.src}
+                  alt={activePhoto.alt}
+                  className="max-h-[70vh] w-auto mx-auto object-contain rounded-xl contrast-[1.05] saturate-[1.05] brightness-[1.02]"
+                />
+              </picture>
             </div>
 
             <p className="w-full text-sm md:text-base leading-relaxed text-gray-700 whitespace-normal">
@@ -264,11 +272,14 @@ export const GallerySection: React.FC = () => {
             </div>
 
             <div className="w-full rounded-2xl shadow-lg border border-gray-100 overflow-hidden bg-white">
-              <img
-                src={CHARITY_INFO.activitiesImage}
-                alt="التقرير الصحفي الكامل لجمعية ذات أثر للأعمال الخيرية"
-                className="w-full h-auto object-cover object-center rounded-xl contrast-[1.05] saturate-[1.05] brightness-[1.02] transition-transform duration-500 hover:scale-110"
-              />
+              <picture className="block w-full">
+                <source srcSet={CHARITY_INFO.activitiesImageWebp} type="image/webp" />
+                <img
+                  src={CHARITY_INFO.activitiesImage}
+                  alt="التقرير الصحفي الكامل لجمعية ذات أثر للأعمال الخيرية"
+                  className="w-full h-auto object-contain rounded-xl contrast-[1.05] saturate-[1.05] brightness-[1.02]"
+                />
+              </picture>
             </div>
           </div>
         </div>

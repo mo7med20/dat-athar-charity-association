@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   MapPin,
   Phone,
@@ -13,6 +13,16 @@ export const Footer: React.FC = () => {
   const [legalModal, setLegalModal] = useState<'privacy' | 'registration' | null>(
     null
   );
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setLegalModal(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const whatsappUrl = buildWhatsAppUrl(CHARITY_INFO.whatsappNumberIntl);
 

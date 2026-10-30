@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Newspaper, ArrowLeft, X, Calendar } from 'lucide-react';
 import { NEWS_ARTICLES, NewsArticleItem, CHARITY_INFO } from '../utils/charityData';
 
@@ -6,6 +6,16 @@ export const NewsSection: React.FC = () => {
   const [selectedArticle, setSelectedArticle] = useState<NewsArticleItem | null>(
     null
   );
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSelectedArticle(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <section
@@ -135,12 +145,17 @@ export const NewsSection: React.FC = () => {
               </button>
             </div>
 
-            <div className="w-full rounded-2xl shadow-lg border border-gray-100 overflow-hidden bg-[#F5F9F7]">
-              <img
-                src={selectedArticle.imageSrc}
-                alt={selectedArticle.imageAlt}
-                className="w-full h-48 md:h-64 object-cover object-center rounded-xl contrast-[1.05] saturate-[1.05] brightness-[1.02] transition-transform duration-500 hover:scale-110"
-              />
+            <div className="w-full rounded-2xl shadow-lg border border-gray-100 overflow-hidden bg-[#F5F9F7] p-2">
+              <picture className="block w-full">
+                {selectedArticle.imageWebp && (
+                  <source srcSet={selectedArticle.imageWebp} type="image/webp" />
+                )}
+                <img
+                  src={selectedArticle.imageSrc}
+                  alt={selectedArticle.imageAlt}
+                  className="max-h-72 w-auto mx-auto object-contain rounded-xl contrast-[1.05] saturate-[1.05] brightness-[1.02]"
+                />
+              </picture>
             </div>
 
             <div className="w-full space-y-3">
