@@ -528,6 +528,286 @@ export function validateInquiryForm(input: InquiryFormInput): ValidationResult {
   };
 }
 
+export const INQUIRY_TOPIC_LABELS: Record<InquiryFormInput['topic'], string> = {
+  donation: 'تنسيق تبرع أو مساهمة خيرية',
+  'dar-riyad': 'التقديم والاستفسار بدار رياض الصالحين',
+  volunteer: 'التطوع في أنشطة الجمعية',
+  general: 'استفسار عام',
+};
+
+export function formatInquiryWhatsAppMessage(input: InquiryFormInput): string {
+  const lines: string[] = [
+    'السلام عليكم ورحمة الله وبركاته،',
+    'رسالة تواصل جديدة من موقع جمعية ذات أثر للأعمال الخيرية:',
+    `• الاسم بالكامل: ${input.fullName.trim()}`,
+    `• رقم الهاتف: ${input.phone.trim()}`,
+  ];
+
+  if (input.email && input.email.trim().length > 0) {
+    lines.push(`• البريد الإلكتروني: ${input.email.trim()}`);
+  }
+
+  lines.push(`• موضوع الرسالة: ${INQUIRY_TOPIC_LABELS[input.topic]}`);
+
+  if (input.selectedProgramTitle && input.selectedProgramTitle.trim().length > 0) {
+    lines.push(`• البرنامج المختار: ${input.selectedProgramTitle.trim()}`);
+  }
+
+  lines.push(`• تفاصيل الرسالة: ${input.message.trim()}`);
+
+  return lines.join('\n');
+}
+
+export function normalizeImageUrl(rawUrl: string): string {
+  const trimmed = rawUrl.trim();
+  if (!trimmed) {
+    return CHARITY_INFO.activitiesImage;
+  }
+
+  const driveFileMatch = trimmed.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (driveFileMatch && driveFileMatch[1]) {
+    return `https://lh3.googleusercontent.com/d/${driveFileMatch[1]}`;
+  }
+
+  const driveOpenMatch = trimmed.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
+  if (driveOpenMatch && driveOpenMatch[1]) {
+    return `https://lh3.googleusercontent.com/d/${driveOpenMatch[1]}`;
+  }
+
+  return trimmed;
+}
+
+export function normalizeGoogleSheetCsvUrl(rawUrl: string): string {
+  const trimmed = rawUrl.trim();
+  if (!trimmed) {
+    return '';
+  }
+
+  if (trimmed.includes('/spreadsheets/d/e/')) {
+    if (trimmed.includes('output=csv')) {
+      return trimmed;
+    }
+    const basePubUrl = trimmed.split('?')[0].replace(/\/pubhtml$/, '/pub');
+    return `${basePubUrl}?output=csv`;
+  }
+
+  const sheetMatch = trimmed.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if (sheetMatch && sheetMatch[1]) {
+    const sheetId = sheetMatch[1];
+    const gidMatch = trimmed.match(/[?&#]gid=([0-9]+)/);
+    const gidParam = gidMatch && gidMatch[1] ? `&gid=${gidMatch[1]}` : '';
+    return `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv${gidParam}`;
+  }
+
+  return trimmed;
+}
+
+export function parseCsvRows(csvText: string): string[][] {
+  const rows: string[][] = [];
+  let currentRow: string[] = [];
+  let currentCell = '';
+  let inQuotes = false;
+
+  const cleanText = csvText.replace(/^\uFEFF/, '');
+
+  for (let i = 0; i < cleanText.length; i++) {
+    const char = cleanText[i];
+    const nextChar = cleanText[i + 1];
+
+    if (inQuotes) {
+      if (char === '"' && nextChar === '"') {
+        currentCell += '"';
+        i++;
+      } else if (char === '"') {
+        inQuotes = false;
+      } else {
+        currentCell += char;
+      }
+    } else {
+      if (char === '"') {
+        inQuotes = true;
+      } else if (char === ',') {
+        currentRow.push(currentCell.trim());
+        currentCell = '';
+      } else if (char === '\r' && nextChar === '\n') {
+        currentRow.push(currentCell.trim());
+        if (currentRow.some((cell) => cell.length > 0)) {
+          rows.push(currentRow);
+        }
+        currentRow = [];
+        currentCell = '';
+        i++;
+      } else if (char === '\n' || char === '\r') {
+        currentRow.push(currentCell.trim());
+        if (currentRow.some((cell) => cell.length > 0)) {
+          rows.push(currentRow);
+        }
+        currentRow = [];
+        currentCell = '';
+      } else {
+        currentCell += char;
+      }
+    }
+  }
+
+  currentRow.push(currentCell.trim());
+  if (currentRow.some((cell) => cell.length > 0)) {
+    rows.push(currentRow);
+  }
+
+  return rows;
+}
+
+export function parseNewsCsv(csvText: string): NewsArticleItem[] {
+  const rows = parseCsvRows(csvText);
+  if (rows.length < 2) {
+    return [];
+  }
+
+  const headerRow = rows[0].map((h) => h.trim().toLowerCase());
+  const findColIndex = (candidates: string[], fallbackIndex: number): number => {
+    const idx = headerRow.findIndex((h) =>
+      candidates.some((c) => h === c.toLowerCase() || h.includes(c.toLowerCase()))
+    );
+    return idx >= 0 ? idx : fallbackIndex;
+  };
+
+  const titleIdx = findColIndex(['title', 'العنوان', 'عنوان الخبر'], 0);
+  const categoryIdx = findColIndex(['category', 'categorylabel', 'التصنيف', 'القسم'], 1);
+  const dateIdx = findColIndex(['date', 'datelabel', 'التاريخ'], 2);
+  const authorIdx = findColIndex(['author', 'authornote', 'الكاتب', 'المصدر'], 3);
+  const summaryIdx = findColIndex(['summary', 'الملخص', 'نبذة'], 4);
+  const fullTextIdx = findColIndex(['fulltext', 'details', 'التفاصيل', 'النص الكامل'], 5);
+  const imageSrcIdx = findColIndex(['imagesrc', 'image', 'الصورة', 'رابط الصورة'], 6);
+  const imageAltIdx = findColIndex(['imagealt', 'alt', 'وصف الصورة'], 7);
+
+  const parsedArticles: NewsArticleItem[] = [];
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    const title = (row[titleIdx] || '').trim();
+    const summary = (row[summaryIdx] || '').trim();
+    if (!title || !summary) {
+      continue;
+    }
+
+    const categoryLabel = (row[categoryIdx] || 'أخبار الجمعية').trim();
+    const dateLabel = (row[dateIdx] || 'تحديث ميداني · 2026').trim();
+    const authorNote = (row[authorIdx] || '').trim() || undefined;
+    const rawFullText = (row[fullTextIdx] || summary).trim();
+    const fullText = rawFullText
+      .split(/\s*\|\|\s*|\n{2,}/)
+      .map((p) => p.trim())
+      .filter((p) => p.length > 0);
+
+    const rawImage = (row[imageSrcIdx] || CHARITY_INFO.activitiesImage).trim();
+    const imageSrc = normalizeImageUrl(rawImage);
+    const imageAlt = (row[imageAltIdx] || title).trim();
+
+    parsedArticles.push({
+      id: `sheet-news-${i}-${title.slice(0, 12).replace(/\s+/g, '-')}`,
+      title,
+      categoryLabel,
+      dateLabel,
+      authorNote,
+      summary,
+      fullText: fullText.length > 0 ? fullText : [summary],
+      imageSrc,
+      imageAlt,
+    });
+  }
+
+  return parsedArticles;
+}
+
+export function formatNewsArticleAsSheetRow(article: NewsArticleItem): string {
+  const cleanCell = (val: string) => val.replace(/[\t\r\n]+/g, ' ').trim();
+  const fullTextJoined = article.fullText.map((p) => cleanCell(p)).join(' || ');
+  return [
+    cleanCell(article.title),
+    cleanCell(article.categoryLabel),
+    cleanCell(article.dateLabel),
+    cleanCell(article.authorNote || ''),
+    cleanCell(article.summary),
+    fullTextJoined,
+    cleanCell(article.imageSrc),
+    cleanCell(article.imageAlt || article.title),
+  ].join('\t');
+}
+
+export function generateNewsSheetTemplateCsv(articles: NewsArticleItem[]): string {
+  const escapeCsv = (val: string) => `"${(val || '').replace(/"/g, '""')}"`;
+  const headers = [
+    'العنوان (title)',
+    'التصنيف (categoryLabel)',
+    'التاريخ (dateLabel)',
+    'الكاتب (authorNote)',
+    'الملخص (summary)',
+    'التفاصيل الكاملة مفصولة بـ || (fullText)',
+    'رابط الصورة (imageSrc)',
+    'وصف الصورة (imageAlt)',
+  ];
+
+  const lines = [headers.map(escapeCsv).join(',')];
+
+  for (const article of articles) {
+    lines.push(
+      [
+        article.title,
+        article.categoryLabel,
+        article.dateLabel,
+        article.authorNote || '',
+        article.summary,
+        article.fullText.join(' || '),
+        article.imageSrc.startsWith('data:')
+          ? CHARITY_INFO.activitiesImage
+          : article.imageSrc,
+        article.imageAlt || article.title,
+      ]
+        .map(escapeCsv)
+        .join(',')
+    );
+  }
+
+  return `\uFEFF${lines.join('\r\n')}`;
+}
+
+export type NewsDisplayMode = 'default' | 'custom' | 'merged';
+
+export const NEWS_DISPLAY_MODE_LABELS: Record<NewsDisplayMode, string> = {
+  default: 'الأخبار الافتراضية فقط',
+  custom: 'أخبار الملف / المضافة فقط',
+  merged: 'دمج الاثنين معاً (الملف + الافتراضية)',
+};
+
+export function resolveDisplayedNews(
+  mode: NewsDisplayMode,
+  defaultArticles: NewsArticleItem[],
+  customArticles: NewsArticleItem[]
+): NewsArticleItem[] {
+  if (mode === 'default') {
+    return defaultArticles;
+  }
+
+  if (mode === 'custom') {
+    return customArticles.length > 0 ? customArticles : defaultArticles;
+  }
+
+  // mode === 'merged'
+  if (customArticles.length === 0) {
+    return defaultArticles;
+  }
+
+  const seenIds = new Set(customArticles.map((a) => a.id));
+  const seenTitles = new Set(customArticles.map((a) => a.title.trim()));
+
+  const uniqueDefaults = defaultArticles.filter(
+    (item) => !seenIds.has(item.id) && !seenTitles.has(item.title.trim())
+  );
+
+  return [...customArticles, ...uniqueDefaults];
+}
+
 export function shouldShowScrollToTop(
   scrollY: number,
   heroBottomOffset: number
@@ -537,4 +817,6 @@ export function shouldShowScrollToTop(
   }
   return scrollY > heroBottomOffset;
 }
+
+
 

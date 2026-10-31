@@ -11,6 +11,13 @@ import {
   buildWhatsAppUrl,
   validateInquiryForm,
   shouldShowScrollToTop,
+  formatInquiryWhatsAppMessage,
+  normalizeGoogleSheetCsvUrl,
+  normalizeImageUrl,
+  parseNewsCsv,
+  formatNewsArticleAsSheetRow,
+  generateNewsSheetTemplateCsv,
+  resolveDisplayedNews,
 } from './charityData';
 
 test('charity official metadata and assets match verified specification', () => {
@@ -60,6 +67,61 @@ test('buildWhatsAppUrl encodes Arabic messages properly for official number', ()
   assert.ok(decodeURIComponent(url).includes('استفسار عن دار رياض الصالحين'));
 });
 
+test('formatInquiryWhatsAppMessage builds structured Arabic message for official WhatsApp', () => {
+  const message = formatInquiryWhatsAppMessage({
+    fullName: 'أحمد محمود علي',
+    phone: '01012345678',
+    email: 'ahmed@example.com',
+    topic: 'dar-riyad',
+    selectedProgramTitle: 'دار رياض الصالحين لتحفيظ القرآن واللغة العربية',
+    message: 'أود الاستفسار عن مواعيد التقديم للأطفال.',
+  });
+  assert.ok(message.includes('أحمد محمود علي'));
+  assert.ok(message.includes('01012345678'));
+  assert.ok(message.includes('ahmed@example.com'));
+  assert.ok(message.includes('التقديم والاستفسار بدار رياض الصالحين'));
+  assert.ok(message.includes('دار رياض الصالحين لتحفيظ القرآن واللغة العربية'));
+  assert.ok(message.includes('أود الاستفسار عن مواعيد التقديم للأطفال.'));
+});
+
+test('normalizeGoogleSheetCsvUrl converts sharing and published URLs into direct CSV export links', () => {
+  const sharedUrl =
+    'https://docs.google.com/spreadsheets/d/1AbC_123456789/edit?usp=sharing';
+  assert.equal(
+    normalizeGoogleSheetCsvUrl(sharedUrl),
+    'https://docs.google.com/spreadsheets/d/1AbC_123456789/export?format=csv'
+  );
+
+  const pubHtmlUrl =
+    'https://docs.google.com/spreadsheets/d/e/2PACX-1vTestId/pubhtml';
+  assert.equal(
+    normalizeGoogleSheetCsvUrl(pubHtmlUrl),
+    'https://docs.google.com/spreadsheets/d/e/2PACX-1vTestId/pub?output=csv'
+  );
+});
+
+test('normalizeImageUrl converts Google Drive links into direct image URLs', () => {
+  const driveLink =
+    'https://drive.google.com/file/d/1XyZ987654321/view?usp=sharing';
+  assert.equal(
+    normalizeImageUrl(driveLink),
+    'https://lh3.googleusercontent.com/d/1XyZ987654321'
+  );
+});
+
+test('generateNewsSheetTemplateCsv, parseNewsCsv, and formatNewsArticleAsSheetRow round-trip accurately', () => {
+  const csv = generateNewsSheetTemplateCsv(NEWS_ARTICLES);
+  const parsed = parseNewsCsv(csv);
+  assert.equal(parsed.length, 3);
+  assert.equal(parsed[0].title, NEWS_ARTICLES[0].title);
+  assert.equal(parsed[0].categoryLabel, NEWS_ARTICLES[0].categoryLabel);
+  assert.equal(parsed[0].fullText.length, NEWS_ARTICLES[0].fullText.length);
+
+  const tsvRow = formatNewsArticleAsSheetRow(NEWS_ARTICLES[0]);
+  assert.ok(tsvRow.includes('\t'));
+  assert.ok(tsvRow.includes(NEWS_ARTICLES[0].title));
+});
+
 test('validateInquiryForm validates required Arabic fields and optional email', () => {
   const invalid = validateInquiryForm({
     fullName: 'مح',
@@ -93,4 +155,38 @@ test('shouldShowScrollToTop returns true only after scrolling past hero section 
   assert.equal(shouldShowScrollToTop(1200, 620), true);
   assert.equal(shouldShowScrollToTop(100, 0), false);
 });
+
+test('resolveDisplayedNews respects saved mode (default, custom, merged) accurately', () => {
+  const customSample = [
+    {
+      id: 'custom-1',
+      title: 'خبر جديد من ملف الجمعية',
+      dateLabel: 'نوفمبر 2026',
+      categoryLabel: 'مبادرات ميدانية',
+      summary: 'ملخص الخبر الجديد من الملف.',
+      fullText: ['فقرة كاملة للخبر الجديد.'],
+      imageSrc: '/image_07ec7a.jpg',
+      imageAlt: 'صورة الخبر',
+    },
+  ];
+
+  const defaultOnly = resolveDisplayedNews('default', NEWS_ARTICLES, customSample);
+  assert.equal(defaultOnly.length, 3);
+  assert.equal(defaultOnly[0].id, NEWS_ARTICLES[0].id);
+
+  const customOnly = resolveDisplayedNews('custom', NEWS_ARTICLES, customSample);
+  assert.equal(customOnly.length, 1);
+  assert.equal(customOnly[0].id, 'custom-1');
+
+  const merged = resolveDisplayedNews('merged', NEWS_ARTICLES, customSample);
+  assert.equal(merged.length, 4);
+  assert.equal(merged[0].id, 'custom-1');
+  assert.equal(merged[1].id, NEWS_ARTICLES[0].id);
+
+  // Fallback when custom is empty
+  const customEmptyFallback = resolveDisplayedNews('custom', NEWS_ARTICLES, []);
+  assert.equal(customEmptyFallback.length, 3);
+});
+
+
 

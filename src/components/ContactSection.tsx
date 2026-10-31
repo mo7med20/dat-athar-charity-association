@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   MapPin,
   Phone,
@@ -7,11 +7,13 @@ import {
   Send,
   CheckCircle2,
   ShieldCheck,
+  X,
 } from 'lucide-react';
 import {
   CHARITY_INFO,
   InquiryFormInput,
   buildWhatsAppUrl,
+  formatInquiryWhatsAppMessage,
   validateInquiryForm,
 } from '../utils/charityData';
 
@@ -38,6 +40,9 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
   const [submittedRecord, setSubmittedRecord] = useState<InquiryFormInput | null>(
     null
   );
+  const [showToast, setShowToast] = useState(false);
+  const redirectTimerRef = useRef<number | null>(null);
+  const dismissToastTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     setFormInput((prev) => ({
@@ -46,19 +51,69 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
     }));
   }, [selectedProgramTitle]);
 
+  useEffect(() => {
+    return () => {
+      if (redirectTimerRef.current) {
+        window.clearTimeout(redirectTimerRef.current);
+      }
+      if (dismissToastTimerRef.current) {
+        window.clearTimeout(dismissToastTimerRef.current);
+      }
+    };
+  }, []);
+
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const validation = validateInquiryForm(formInput);
     if (!validation.valid) {
       setFormErrors(validation.errors);
       setSubmittedRecord(null);
+      setShowToast(false);
       return;
     }
+    const cleanRecord: InquiryFormInput = {
+      ...formInput,
+      selectedProgramTitle,
+    };
     setFormErrors({});
-    setSubmittedRecord({ ...formInput });
+    setSubmittedRecord(cleanRecord);
+    setShowToast(true);
+
+    const formattedMsg = formatInquiryWhatsAppMessage(cleanRecord);
+    const targetWhatsAppUrl = buildWhatsAppUrl(
+      CHARITY_INFO.whatsappNumberIntl,
+      formattedMsg
+    );
+
+    if (redirectTimerRef.current) {
+      window.clearTimeout(redirectTimerRef.current);
+    }
+    if (dismissToastTimerRef.current) {
+      window.clearTimeout(dismissToastTimerRef.current);
+    }
+
+    redirectTimerRef.current = window.setTimeout(() => {
+      const tempAnchor = document.createElement('a');
+      tempAnchor.href = targetWhatsAppUrl;
+      tempAnchor.target = '_blank';
+      tempAnchor.rel = 'noopener noreferrer';
+      document.body.appendChild(tempAnchor);
+      tempAnchor.click();
+      document.body.removeChild(tempAnchor);
+    }, 900);
+
+    dismissToastTimerRef.current = window.setTimeout(() => {
+      setShowToast(false);
+    }, 5500);
   };
 
   const whatsappContactHref = buildWhatsAppUrl(CHARITY_INFO.whatsappNumberIntl);
+  const submittedWhatsAppHref = submittedRecord
+    ? buildWhatsAppUrl(
+        CHARITY_INFO.whatsappNumberIntl,
+        formatInquiryWhatsAppMessage(submittedRecord)
+      )
+    : whatsappContactHref;
 
   return (
     <section
@@ -397,7 +452,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
                 className="w-full md:w-auto py-2.5 px-6 inline-flex items-center justify-center gap-2 rounded-xl text-[13.5px] md:text-sm font-medium whitespace-nowrap text-white bg-blue-900 hover:bg-[#159EAA] transition-colors cursor-pointer"
               >
                 <Send className="w-4 h-4 shrink-0" aria-hidden="true" />
-                <span>إرسال الرسالة</span>
+                <span>إرسال الرسالة عبر واتساب</span>
               </button>
             </form>
 
@@ -405,29 +460,88 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
               <div
                 role="status"
                 aria-live="polite"
-                className="w-full p-3.5 rounded-xl bg-[#F5F9F7] border border-[#159EAA] flex items-start gap-2.5 text-sm md:text-[15px] text-blue-900 leading-relaxed"
+                className="w-full p-4 rounded-xl bg-[#F5F9F7] border border-[#159EAA] space-y-3 text-sm md:text-[15px] text-blue-900 leading-relaxed"
               >
-                <CheckCircle2
-                  className="w-4 h-4 text-[#159EAA] shrink-0 mt-0.5"
-                  aria-hidden="true"
-                />
-                <div className="space-y-0.5 flex-1 min-w-0">
-                  <h4 className="w-full text-[15px] md:text-[17px] font-bold text-blue-900 whitespace-normal">
-                    شكراً لتواصلك معنا يا {submittedRecord.fullName}!
-                  </h4>
-                  <p className="w-full text-sm md:text-[15px] leading-relaxed text-gray-700 whitespace-normal">
-                    تم استلام رسالتك بنجاح، وسيتواصل معك فريق الجمعية على الرقم{' '}
-                    <span className="font-mono-num font-bold text-blue-900" dir="ltr">
-                      {submittedRecord.phone}
-                    </span>{' '}
-                    في أقرب وقت.
+                <div className="flex items-start gap-2.5">
+                  <CheckCircle2
+                    className="w-4 h-4 text-[#159EAA] shrink-0 mt-0.5"
+                    aria-hidden="true"
+                  />
+                  <div className="space-y-1 flex-1 min-w-0">
+                    <h4 className="w-full text-[15px] md:text-[17px] font-bold text-blue-900 whitespace-normal">
+                      شكراً لتواصلك معنا يا {submittedRecord.fullName}!
+                    </h4>
+                    <p className="w-full text-sm md:text-[15px] leading-relaxed text-gray-700 whitespace-normal">
+                      تم تجهيز رسالتك وتوجيهك مباشرةً إلى واتساب الجمعية الرسمي{' '}
+                      <span className="font-mono-num font-bold text-blue-900" dir="ltr">
+                        ({CHARITY_INFO.officialPhone})
+                      </span>{' '}
+                      ليتواصل معك فريق الجمعية على رقمك{' '}
+                      <span className="font-mono-num font-bold text-blue-900" dir="ltr">
+                        {submittedRecord.phone}
+                      </span>
+                      .
+                    </p>
+                  </div>
+                </div>
+
+                <div className="w-full p-3 rounded-xl bg-white border border-[#DCE7E5] space-y-1">
+                  <p className="text-xs font-bold text-teal-600">
+                    نص الرسالة الجاهزة للإرسال عبر واتساب:
                   </p>
+                  <pre className="w-full text-xs md:text-[13px] font-sans text-gray-700 whitespace-pre-wrap leading-relaxed">
+                    {formatInquiryWhatsAppMessage(submittedRecord)}
+                  </pre>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2.5 pt-1">
+                  <a
+                    href={submittedWhatsAppHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="py-2 px-4 inline-flex items-center justify-center gap-2 rounded-xl text-[13.5px] md:text-sm font-medium whitespace-nowrap text-white bg-[#159EAA] hover:bg-blue-900 transition-colors"
+                  >
+                    <MessageCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
+                    <span>تأكيد الإرسال عبر واتساب ({CHARITY_INFO.officialPhone})</span>
+                  </a>
                 </div>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Floating Success Toast Notification before WhatsApp Redirect */}
+      {showToast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-md bg-blue-900 text-white border border-[#159EAA] rounded-2xl p-4 shadow-xl flex items-start justify-between gap-3 transition-all duration-200"
+        >
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-[#159EAA] flex items-center justify-center text-white shrink-0 mt-0.5">
+              <CheckCircle2 className="w-4 h-4" aria-hidden="true" />
+            </div>
+            <div className="space-y-0.5 min-w-0">
+              <p className="text-sm font-bold text-white whitespace-normal">
+                تم تجهيز رسالتك لواتساب بنجاح
+              </p>
+              <p className="text-xs text-gray-200 leading-relaxed whitespace-normal">
+                جاري توجيهك الآن إلى واتساب الجمعية الرسمي ({CHARITY_INFO.officialPhone}) لإرسال التفاصيل...
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowToast(false)}
+            aria-label="إغلاق الإشعار"
+            className="p-1 rounded-lg text-gray-200 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+          >
+            <X className="w-4 h-4" aria-hidden="true" />
+          </button>
+        </div>
+      )}
     </section>
   );
 };
+

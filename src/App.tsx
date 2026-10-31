@@ -15,6 +15,7 @@ import { DonationSection } from './components/DonationSection';
 import { ContactSection } from './components/ContactSection';
 import { Footer } from './components/Footer';
 import { ScrollToTopButton } from './components/ScrollToTopButton';
+import { RevealSection } from './components/RevealSection';
 import { PROGRAMS_DATA, ProgramItem } from './utils/charityData';
 
 export default function App() {
@@ -44,17 +45,31 @@ export default function App() {
 
       <main className="flex-1 min-w-0 w-full max-w-[100vw] overflow-x-hidden">
         <HeroSection onPrimaryDonateClick={() => scrollToSection('donate')} />
-        <AboutSection />
-        <ProgramsSection onSupportProgram={handleSupportProgram} />
-        <ImpactSection />
-        <GallerySection />
-        <NewsSection />
-        <DonationSection
-          selectedProgramTitle={selectedProgramTitle}
-          onSelectProgramTitle={setSelectedProgramTitle}
-          onProceedToContactForm={() => scrollToSection('contact')}
-        />
-        <ContactSection selectedProgramTitle={selectedProgramTitle} />
+        <RevealSection>
+          <AboutSection />
+        </RevealSection>
+        <RevealSection>
+          <ProgramsSection onSupportProgram={handleSupportProgram} />
+        </RevealSection>
+        <RevealSection>
+          <ImpactSection />
+        </RevealSection>
+        <RevealSection>
+          <GallerySection />
+        </RevealSection>
+        <RevealSection>
+          <NewsSection />
+        </RevealSection>
+        <RevealSection>
+          <DonationSection
+            selectedProgramTitle={selectedProgramTitle}
+            onSelectProgramTitle={setSelectedProgramTitle}
+            onProceedToContactForm={() => scrollToSection('contact')}
+          />
+        </RevealSection>
+        <RevealSection>
+          <ContactSection selectedProgramTitle={selectedProgramTitle} />
+        </RevealSection>
       </main>
 
       <Footer />
@@ -62,4 +77,5 @@ export default function App() {
     </div>
   );
 }
+
 

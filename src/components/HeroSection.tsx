@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { HeartHandshake, ArrowLeft, ShieldCheck, BookOpen, Users } from 'lucide-react';
 import { CHARITY_INFO } from '../utils/charityData';
 
@@ -24,7 +25,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onPrimaryDonateClick }
       {/* Hero Container: EXACTLY flex flex-col lg:flex-row items-center justify-between gap-10 lg:gap-16 w-full max-w-7xl mx-auto */}
       <div className="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-14 w-full max-w-7xl mx-auto">
         {/* Text Block: flex-1 */}
-        <div className="flex-1 min-w-0 w-full space-y-4">
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+          className="flex-1 min-w-0 w-full space-y-4"
+        >
           {/* Official Registration Metadata */}
           <div className="w-full flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] md:text-sm font-medium text-teal-600">
             <ShieldCheck className="w-4 h-4 shrink-0 text-teal-600" aria-hidden="true" />
@@ -103,10 +109,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onPrimaryDonateClick }
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Image Container: w-full lg:w-1/2 flex justify-center */}
-        <div className="w-full lg:w-1/2 flex justify-center">
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
+          className="w-full lg:w-1/2 flex justify-center"
+        >
           <figure className="w-full max-w-sm lg:max-w-md flex flex-col items-center space-y-2.5">
             <picture className="w-full max-w-sm lg:max-w-md block">
               {heroImgSrc === CHARITY_INFO.heroImage && (
@@ -135,7 +146,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onPrimaryDonateClick }
               </span>
             </figcaption>
           </figure>
-        </div>
+        </motion.div>
       </div>
     </section>
   );
