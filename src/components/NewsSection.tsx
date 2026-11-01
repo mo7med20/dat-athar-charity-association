@@ -14,7 +14,6 @@ import { NewsAdminModal } from './NewsAdminModal';
 const STORAGE_ARTICLES_KEY = 'dat_athar_custom_news_v1';
 const STORAGE_DISPLAY_MODE_KEY = 'dat_athar_news_display_mode_v1';
 const STORAGE_SHEET_URL_KEY = 'dat_athar_sheet_url_v1';
-const STORAGE_PASSCODE_KEY = 'dat_athar_admin_passcode_v1';
 const DEFAULT_ADMIN_PASSCODE = '8014';
 
 export const NewsSection: React.FC = () => {
@@ -60,13 +59,10 @@ export const NewsSection: React.FC = () => {
     }
   });
 
-  const [adminPasscode, setAdminPasscode] = useState<string>(() => {
-    try {
-      return localStorage.getItem(STORAGE_PASSCODE_KEY) || DEFAULT_ADMIN_PASSCODE;
-    } catch {
-      return DEFAULT_ADMIN_PASSCODE;
-    }
-  });
+  // Passcode is strictly controlled by charity management via VITE_ADMIN_PASSCODE (never modifiable by site visitors)
+  const adminPasscode =
+    (import.meta as unknown as { env?: Record<string, string> }).env
+      ?.VITE_ADMIN_PASSCODE?.trim() || DEFAULT_ADMIN_PASSCODE;
 
   const [selectedArticle, setSelectedArticle] = useState<NewsArticleItem | null>(
     null
@@ -182,15 +178,6 @@ export const NewsSection: React.FC = () => {
       return { ok: true, count: customArticles.length };
     }
     return fetchFromGoogleSheet(newUrl);
-  };
-
-  const handleChangePasscode = (newCode: string) => {
-    setAdminPasscode(newCode);
-    try {
-      localStorage.setItem(STORAGE_PASSCODE_KEY, newCode);
-    } catch {
-      // ignore
-    }
   };
 
   return (
@@ -383,7 +370,6 @@ export const NewsSection: React.FC = () => {
         sheetUrl={sheetUrl}
         onSaveSheetUrl={handleSaveSheetUrl}
         adminPasscode={adminPasscode}
-        onChangePasscode={handleChangePasscode}
       />
     </section>
   );

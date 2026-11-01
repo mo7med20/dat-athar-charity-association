@@ -40,7 +40,6 @@ interface NewsAdminModalProps {
   sheetUrl: string;
   onSaveSheetUrl: (url: string) => Promise<{ ok: boolean; count: number; error?: string }>;
   adminPasscode: string;
-  onChangePasscode: (newCode: string) => void;
 }
 
 const PRESET_IMAGES = [
@@ -92,7 +91,6 @@ export const NewsAdminModal: React.FC<NewsAdminModalProps> = ({
   sheetUrl,
   onSaveSheetUrl,
   adminPasscode,
-  onChangePasscode,
 }) => {
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [passcodeInput, setPasscodeInput] = useState('');
@@ -121,15 +119,21 @@ export const NewsAdminModal: React.FC<NewsAdminModalProps> = ({
   const [statusBanner, setStatusBanner] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // Sheet Sync & Passcode Settings State
+  // Sheet Sync State
   const [sheetUrlInput, setSheetUrlInput] = useState(sheetUrl);
   const [isSyncingSheet, setIsSyncingSheet] = useState(false);
   const [sheetStatusMsg, setSheetStatusMsg] = useState('');
-  const [newPasscodeInput, setNewPasscodeInput] = useState('');
 
   if (!isOpen) {
     return null;
   }
+
+  const handleLockAndClose = () => {
+    setIsUnlocked(false);
+    setPasscodeInput('');
+    setPasscodeError('');
+    onClose();
+  };
 
   const mergedArticles = resolveDisplayedNews('merged', defaultArticles, customArticles);
   const currentlyDisplayedArticles = resolveDisplayedNews(
@@ -142,11 +146,12 @@ export const NewsAdminModal: React.FC<NewsAdminModalProps> = ({
     e.preventDefault();
     if (passcodeInput.trim() === adminPasscode) {
       setIsUnlocked(true);
+      setPasscodeInput('');
       setPasscodeError('');
       setSheetUrlInput(sheetUrl);
       setPendingDisplayMode(displayMode);
     } else {
-      setPasscodeError('رمز المرور غير صحيح. (الرمز الافتراضي للتجربة: 8014)');
+      setPasscodeError('رمز المرور السري غير صحيح. هذه اللوحة مخصصة لإدارة الجمعية فقط.');
     }
   };
 
@@ -310,18 +315,6 @@ export const NewsAdminModal: React.FC<NewsAdminModalProps> = ({
     }
   };
 
-  const handlePasscodeChangeSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleaned = newPasscodeInput.trim();
-    if (cleaned.length < 4) {
-      setSheetStatusMsg('يرجى اختيار رمز مرور مكون من 4 أحرف أو أرقام على الأقل.');
-      return;
-    }
-    onChangePasscode(cleaned);
-    setNewPasscodeInput('');
-    setSheetStatusMsg('تم تحديث رمز المرور السري للوحة التحكم بنجاح.');
-  };
-
   const normalizedPreviewUrl = normalizeGoogleSheetCsvUrl(sheetUrlInput);
 
   return (
@@ -330,7 +323,7 @@ export const NewsAdminModal: React.FC<NewsAdminModalProps> = ({
       aria-modal="true"
       aria-label="لوحة إدارة ونشر أخبار الجمعية"
       className="fixed inset-0 z-50 bg-[#103B70]/85 backdrop-blur-xs flex items-center justify-center p-3 md:p-5 overflow-y-auto"
-      onClick={onClose}
+      onClick={handleLockAndClose}
     >
       <div
         className="bg-white rounded-2xl max-w-4xl w-full max-h-[92vh] overflow-y-auto p-4 md:p-6 space-y-5 shadow-xl border border-[#DCE7E5]"
@@ -348,7 +341,7 @@ export const NewsAdminModal: React.FC<NewsAdminModalProps> = ({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleLockAndClose}
             aria-label="إغلاق لوحة إدارة الأخبار"
             className="min-h-[42px] min-w-[42px] inline-flex items-center justify-center rounded-xl text-blue-900 hover:bg-[#F5F9F7] cursor-pointer shrink-0"
           >
@@ -364,11 +357,10 @@ export const NewsAdminModal: React.FC<NewsAdminModalProps> = ({
             </div>
             <div className="text-center space-y-1">
               <h4 className="text-base md:text-lg font-bold text-blue-900">
-                الدخول المخصص لإدارة الجمعية
+                الدخول المخصص لإدارة الجمعية فقط
               </h4>
               <p className="text-xs md:text-sm text-gray-600 leading-relaxed">
-                أدخل رمز المرور السري لفتح لوحة نشر وتحديث الأخبار (الرمز الافتراضي للتجربة هو رقم إشهار الجمعية:{' '}
-                <span className="font-mono-num font-bold text-blue-900">8014</span>)
+                أدخل رمز المرور السري الخاص بإدارة جمعية ذات أثر لفتح لوحة نشر وتحديث الأخبار.
               </p>
             </div>
 
@@ -377,16 +369,17 @@ export const NewsAdminModal: React.FC<NewsAdminModalProps> = ({
                 htmlFor="admin-passcode-input"
                 className="block text-xs md:text-sm font-medium text-blue-900 mb-1.5"
               >
-                رمز المرور السري
+                رمز المرور السري للإدارة
               </label>
               <input
                 id="admin-passcode-input"
                 type="password"
                 dir="ltr"
                 required
+                autoComplete="off"
                 value={passcodeInput}
                 onChange={(e) => setPasscodeInput(e.target.value)}
-                placeholder="8014"
+                placeholder="••••••••"
                 className="w-full px-3.5 py-2.5 bg-[#F5F9F7] border border-[#DCE7E5] rounded-xl text-center font-mono-num text-base text-blue-900 focus:bg-white focus:outline-2 focus:outline-[#159EAA]"
               />
               {passcodeError && (
@@ -977,34 +970,32 @@ export const NewsAdminModal: React.FC<NewsAdminModalProps> = ({
                   </div>
                 </form>
 
-                {/* Change Secret Passcode */}
-                <form
-                  onSubmit={handlePasscodeChangeSubmit}
-                  className="p-4 rounded-2xl bg-white border border-[#DCE7E5] space-y-3"
-                >
-                  <div className="flex items-center gap-2 text-blue-900">
-                    <KeyRound className="w-4 h-4 text-[#159EAA]" aria-hidden="true" />
-                    <h4 className="text-xs md:text-sm font-bold">
-                      تغيير رمز المرور السري للوحة التحكم
-                    </h4>
-                  </div>
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-                    <input
-                      type="password"
-                      dir="ltr"
-                      value={newPasscodeInput}
-                      onChange={(e) => setNewPasscodeInput(e.target.value)}
-                      placeholder="أدخل رمز المرور الجديد (4 خانات على الأقل)"
-                      className="flex-1 px-3.5 py-2 bg-[#F5F9F7] border border-[#DCE7E5] rounded-xl text-xs md:text-sm text-gray-800 focus:bg-white focus:outline-2 focus:outline-[#159EAA]"
-                    />
+                {/* Official Management Passcode Security Notice */}
+                <div className="p-4 rounded-2xl bg-[#F5F9F7] border border-[#DCE7E5] space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-blue-900">
+                      <KeyRound className="w-4 h-4 text-[#159EAA]" aria-hidden="true" />
+                      <h4 className="text-xs md:text-sm font-bold">
+                        حماية رمز المرور السري (خاص بإدارة الجمعية فقط)
+                      </h4>
+                    </div>
                     <button
-                      type="submit"
-                      className="py-2 px-4 rounded-xl bg-[#F5F9F7] hover:bg-blue-900 text-blue-900 hover:text-white text-xs md:text-sm font-medium transition-colors cursor-pointer whitespace-nowrap"
+                      type="button"
+                      onClick={handleLockAndClose}
+                      className="py-1.5 px-3 rounded-lg bg-white hover:bg-blue-900 text-blue-900 hover:text-white border border-[#DCE7E5] text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer"
                     >
-                      تحديث رمز المرور
+                      <Lock className="w-3.5 h-3.5" aria-hidden="true" />
+                      <span>قفل اللوحة الآن</span>
                     </button>
                   </div>
-                </form>
+                  <p className="text-xs text-gray-600 leading-relaxed">
+                    لضمان أمان الموقع، تم إيقاف إمكانية تغيير كلمة المرور من المتصفح نهائياً حتى لا يتمكن أي زائر من العبث بها. يتم التحكم في رمز المرور حصرياً من قِبل إدارة الجمعية عبر متغير البيئة السري{' '}
+                    <code className="font-mono-num bg-white px-1.5 py-0.5 rounded border border-[#DCE7E5] text-blue-900">
+                      VITE_ADMIN_PASSCODE
+                    </code>{' '}
+                    في إعدادات حساب <strong>Vercel</strong> الخاص بالجمعية. كما أن تعديل جدول Google Sheet لا يتم إلا من خلال الحساب الذي يمتلك صلاحية التعديل (حسابك الشخصي الآن أو حساب الجمعية الرسمي).
+                  </p>
+                </div>
 
                 {sheetStatusMsg && (
                   <div
